@@ -29,19 +29,12 @@ stages:
     entrypoint: [""]
   variables:
     <<: *default-variables
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}-tofu-${CI_JOB_IMAGE}
-    paths:
-      - ${TF_ROOT}/.terraform/providers/
-      - ${TF_ROOT}/.terraform.lock.hcl
-    policy: pull-push
-  before_script:
-    - *default-tofu-init
 
 tofu-validate:
   <<: *tofu-base
   stage: validate
   script:
+    - *default-tofu-init
     - tofu validate
 
 tofu-apply:
@@ -54,6 +47,7 @@ tofu-apply:
     - export TF_VAR_vault_token=${VAULT_TOKEN}
     - export TF_VAR_vault_address=${VAULT_ADDR}
   script:
+    - *default-tofu-init
     - tofu plan -out=tfplan
     - tofu apply -auto-approve tfplan
 
@@ -67,4 +61,5 @@ tofu-destroy:
     - export TF_VAR_vault_token=${VAULT_TOKEN}
     - export TF_VAR_vault_address=${VAULT_ADDR}
   script:
+    - *default-tofu-init
     - tofu destroy -auto-approve
