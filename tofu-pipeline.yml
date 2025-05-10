@@ -7,6 +7,7 @@ stages:
   TF_USERNAME: gitlab-ci-token
   TF_PASSWORD: ${CI_JOB_TOKEN}
   TF_ADDRESS: https://gitlab.elreservoir.com/api/v4/projects/${CI_PROJECT_ID}/terraform/state/default
+  TF_ROOT: "."
 
 
 .default-tofu-init: &default-tofu-init
@@ -22,50 +23,48 @@ stages:
     -backend-config=unlock_method=DELETE \
     -backend-config=retry_wait_min=5
 
-tofu-validate:
-  stage: validate
+.tofu-base: &tofu-base
   image:
     name: ghcr.io/opentofu/opentofu:1.9.1
     entrypoint: [""]
   variables:
     <<: *default-variables
-  script:
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-tofu-${CI_JOB_IMAGE}
+    paths:
+      - ${TF_ROOT}/.terraform/providers/
+      - ${TF_ROOT}/.terraform.lock.hcl
+    policy: pull-push
+  before_script:
     - *default-tofu-init
+
+tofu-validate:
+  <<: *tofu-base
+  stage: validate
+  script:
     - tofu validate
 
 tofu-apply:
+  <<: *tofu-base
   stage: apply
   needs: ["tofu-validate"]
   only:
-    refs:
-      - main
-  image:
-    name: ghcr.io/opentofu/opentofu:1.9.1
-    entrypoint: [""]
-  variables:
-    <<: *default-variables
+    - main
   before_script:
     - export TF_VAR_vault_token=${VAULT_TOKEN}
     - export TF_VAR_vault_address=${VAULT_ADDR}
   script:
-    - *default-tofu-init
     - tofu plan -out=tfplan
     - tofu apply -auto-approve tfplan
 
 tofu-destroy:
+  <<: *tofu-base
   stage: destroy
   when: manual
   only:
-    refs:
-      - main
-  image:
-    name: ghcr.io/opentofu/opentofu:1.9.1
-    entrypoint: [""]
-  variables:
-    <<: *default-variables
+    - main
   before_script:
     - export TF_VAR_vault_token=${VAULT_TOKEN}
     - export TF_VAR_vault_address=${VAULT_ADDR}
   script:
-    - *default-tofu-init
     - tofu destroy -auto-approve
