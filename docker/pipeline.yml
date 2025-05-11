@@ -1,0 +1,28 @@
+stages:
+  - prepare
+
+process:template:
+  stage: prepare
+  only:
+    - main
+  before_script:
+    - apk add --no-cache gettext jq
+  script:
+    - if [ -z "$PROJECTS" ]; then
+        echo "PROJECTS variable not set, detecting changes...";
+        CHANGED_FILES=$(git diff --name-only HEAD^ HEAD);
+        export PROJECTS=$(echo "$CHANGED_FILES" | sed -n 's#^\([^/]*\)/compose\.yaml#\1#p' | grep -v "^\.unused" | jq -R -s -c 'split("\n")[:-1]');
+      else
+        echo "PROJECTS variable found $PROJECTS";
+      fi
+    - if [ "$PROJECTS" = "[]" ]; then
+        echo "No projects found to deploy";
+        printf "dummy:\n  script:\n    - echo \"Job succeeded\"\n" > template.gitlab-ci.yml;
+      else
+        echo "Found stacks $PROJECTS";
+        envsubst '${PROJECTS}' < template.yml > template.gitlab-ci.yml;
+      fi
+  artifacts:
+    paths:
+      - template.gitlab-ci.yml
+    expire_in: 1 hour

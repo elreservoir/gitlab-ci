@@ -1,0 +1,14 @@
+stages:
+  - matrix
+
+deploy:stacks:
+  stage: matrix
+  image: alpine:latest  
+  parallel:
+    matrix:
+      - STACK_NAME: ${PROJECTS}
+  before_script:
+    - apk add --no-cache curl jq
+    - chmod +x ./docker/deploy-stack.sh
+  script:
+    - source ./docker/deploy-stack.sh
