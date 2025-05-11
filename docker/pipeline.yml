@@ -20,7 +20,7 @@ process:template:
         printf "dummy:\n  script:\n    - echo \"Job succeeded\"\n" > template.gitlab-ci.yml;
       else
         echo "Found stacks $PROJECTS";
-        envsubst '${PROJECTS}' < template.yml > template.gitlab-ci.yml;
+        envsubst '${PROJECTS}' < -/docker/template.yml > template.gitlab-ci.yml;
       fi
   artifacts:
     paths:
